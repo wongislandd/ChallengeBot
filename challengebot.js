@@ -13,6 +13,7 @@ const challenge = new SlashCommandBuilder()
 const commands = [
     challenge,
     new SlashCommandBuilder().setName('ping').setDescription("Check my status"),
+    new SlashCommandBuilder().setName('code').setDescription("Link my code"),
 ].map(command => command.toJSON())
 
 
@@ -20,6 +21,8 @@ const rest = new REST({ version: '9' }).setToken(token)
 
 const challengeMap = settings.challenges
 const challengeNames = Object.keys(challengeMap)
+
+const codeLink = "https://github.com/wongislandd/ChallengeBot/blob/main/challengebot.js"
 
 rest.put(Routes.applicationGuildCommands(settings.clientId, settings.serverId), { body: commands })
     .then(() => console.log("Successfully registered application commands."))
@@ -50,6 +53,9 @@ client.on('interactionCreate', async interaction => {
             let rolledChallenge = rollChallenge()
             interaction.reply(getChallengeEmbededResponse(rolledChallenge))
             break
+        case 'code':
+            interaction.reply({ content: getCodeLink(), ephemeral: true })
+            break
         case 'ping':
             interaction.reply({ content: "Pong!", ephemeral: true })
             break;
@@ -68,6 +74,10 @@ function getChallengeEmbededResponse(challengeName) {
     return {
         embeds: [embededImage.data]
     }
+}
+
+function getCodeLink() {
+    return "View my code here: " + codeLink
 }
 
 /**
