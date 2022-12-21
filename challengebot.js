@@ -6,12 +6,24 @@ const { Routes } = require('discord-api-types/v9');
 const { REST } = require('@discordjs/rest');
 const settings = require('./settings.json')
 
-const challenge = new SlashCommandBuilder()
+const exclusionKey = 'exclusion'
+const challengeMap = settings.challenges
+const challengeNames = Object.keys(challengeMap)
+const challengeChoices = challengeNames.map(challengeName => ({ name: challengeName, value : challengeName}))
+const codeLink = "https://github.com/wongislandd/ChallengeBot/blob/main/challengebot.js"
+
+const challengeCmd = new SlashCommandBuilder()
     .setName('challenge')
-    .setDescription("Roll a team comp challenge.")
+    .setDescription('Roll a team comp challenge.')
+    .addStringOption(option =>
+        option.setName(exclusionKey)
+            .setDescription('Exclude a comp from the choice pool.')
+            .setRequired(false)
+            .addChoices(...challengeChoices) 
+    )
 
 const commands = [
-    challenge,
+    challengeCmd,
     new SlashCommandBuilder().setName('ping').setDescription("Check my status"),
     new SlashCommandBuilder().setName('code').setDescription("Link my code"),
 ].map(command => command.toJSON())
@@ -19,12 +31,8 @@ const commands = [
 
 const rest = new REST({ version: '9' }).setToken(token)
 
-const challengeMap = settings.challenges
-const challengeNames = Object.keys(challengeMap)
 
-const codeLink = "https://github.com/wongislandd/ChallengeBot/blob/main/challengebot.js"
-
-rest.put(Routes.applicationGuildCommands(settings.clientId, settings.serverId), { body: commands })
+rest.put(Routes.applicationCommands(settings.clientId), { body: commands })
     .then(() => console.log("Successfully registered application commands."))
     .catch(console.error)
 
@@ -33,25 +41,17 @@ const client = new Client({
     partials: ["MESSAGE", "CHANNEL", "REACTION", "GUILD_MEMBERS"],
 })
 
-client.on("guildMemberAdd", (member) => {
-    nickname(member)
-})
-
 
 client.on('interactionCreate', async interaction => {
     if (!interaction.isCommand()) return;
 
     const { commandName, member, channel } = interaction
 
-    if (channel.id != settings.challengesChannelId) {
-        interaction.reply({ content: 'Use the reroll channel for this command!', ephemeral: true })
-        return;
-    }
-
     switch (commandName) {
         case 'challenge':
-            let rolledChallenge = rollChallenge()
-            interaction.reply(getChallengeEmbededResponse(rolledChallenge))
+            let excludedChallenge = interaction.options.getString(exclusionKey)
+            let rolledChallenge = excludedChallenge ? rollChallengeWithExclusion() : rollChallenge()
+            interaction.reply(getChallengeEmbededResponse(rolledChallenge, excludedChallenge))
             break
         case 'code':
             interaction.reply({ content: getCodeLink(), ephemeral: true })
@@ -62,17 +62,29 @@ client.on('interactionCreate', async interaction => {
     }
 })
 
-function rollChallenge() {
-    return challengeNames[Math.floor(Math.random()*challengeNames.length)]
+function rollChallengeWithExclusion(excludedChallenge) {
+    const filteredChallengeNames = challengeNames.filter(challenge => challenge != excludedChallenge)
+    return rollRandom(filteredChallengeNames)
 }
 
-function getChallengeEmbededResponse(challengeName) {
+function rollChallenge() {
+    return rollRandom(challengeNames)
+}
+
+function rollRandom(arr) {
+    return arr[Math.floor(Math.random()*arr.length)]
+}
+
+function getChallengeEmbededResponse(challengeName, excludedChallenge) {
     let challengeImageUrl = challengeMap[challengeName]
-    const embededImage = new EmbedBuilder()
+    const embeded = new EmbedBuilder()
         .setTitle(challengeName)
         .setImage(challengeImageUrl)
+    if (excludedChallenge != null) {
+        embeded.setDescription("Excluded " + excludedChallenge + " from the selection.")
+    }
     return {
-        embeds: [embededImage.data]
+        embeds: [embeded.data]
     }
 }
 
@@ -85,7 +97,7 @@ function getCodeLink() {
  */
  client.on("ready", () => {
     console.log("Bot is online!")
-    client.user.setActivity("Use /challenge to roll a team comp.")
+    client.user.setActivity("Roll a /challenge!")
 })
 
 
