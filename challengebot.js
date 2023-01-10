@@ -26,6 +26,7 @@ const commands = [
     challengeCmd,
     new SlashCommandBuilder().setName('ping').setDescription("Check my status"),
     new SlashCommandBuilder().setName('code').setDescription("Link my code"),
+    new SlashCommandBuilder().setName('list').setDescription("List all the challenges")
 ].map(command => command.toJSON())
 
 
@@ -53,6 +54,9 @@ client.on('interactionCreate', async interaction => {
             let rolledChallenge = excludedChallenge ? rollChallengeWithExclusion() : rollChallenge()
             interaction.reply(getChallengeEmbededResponse(rolledChallenge, excludedChallenge))
             break
+        case 'list':
+            interaction.reply(formatChallenges())
+            break
         case 'code':
             interaction.reply({ content: getCodeLink(), ephemeral: true })
             break
@@ -61,6 +65,22 @@ client.on('interactionCreate', async interaction => {
             break;
     }
 })
+
+function formatChallenges() {
+    let result = ""
+    challengeNames.forEach(name => {
+        result += titleAndLink(name, challengeMap[name]) + "\n"
+    })
+    return result
+}
+
+function titleAndLink(title, link) {
+    return bold(title) + " : " + link
+}
+
+function bold(str) {
+    return "**" + str + "**"
+}
 
 function rollChallengeWithExclusion(excludedChallenge) {
     const filteredChallengeNames = challengeNames.filter(challenge => challenge != excludedChallenge)
@@ -80,6 +100,7 @@ function getChallengeEmbededResponse(challengeName, excludedChallenge) {
     const embeded = new EmbedBuilder()
         .setTitle(challengeName)
         .setImage(challengeImageUrl)
+    console.log(embeded)
     if (excludedChallenge != null) {
         embeded.setDescription("Excluded " + excludedChallenge + " from the selection.")
     }
