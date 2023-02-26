@@ -26,7 +26,8 @@ const commands = [
     challengeCmd,
     new SlashCommandBuilder().setName('ping').setDescription("Check my status"),
     new SlashCommandBuilder().setName('code').setDescription("Link my code"),
-    new SlashCommandBuilder().setName('list').setDescription("List all the challenges")
+    new SlashCommandBuilder().setName('list').setDescription("List all the challenges"),
+    new SlashCommandBuilder().setName('full').setDescription('Get master album of comps')
 ].map(command => command.toJSON())
 
 
@@ -53,6 +54,9 @@ client.on('interactionCreate', async interaction => {
             let excludedChallenge = interaction.options.getString(exclusionKey)
             let rolledChallenge = excludedChallenge ? rollChallengeWithExclusion() : rollChallenge()
             interaction.reply(getChallengeEmbededResponse(rolledChallenge, excludedChallenge))
+            break
+        case 'full':
+            interaction.reply(settings.masterList)
             break
         case 'list':
             interaction.reply(formatChallenges())
